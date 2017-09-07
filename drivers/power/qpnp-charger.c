@@ -1370,11 +1370,21 @@ qpnp_bat_if_adc_disable_work(struct work_struct *work)
 	qpnp_adc_tm_disable_chan_meas(chip->adc_tm_dev, &chip->adc_param);
 }
 
+#ifdef CONFIG_ANDROID_INTF_ALARM_DEV
+#define POWER_STAGE_REDUCE_CHECK_PERIOD_NS      (20LL * NSEC_PER_SEC)
+#else
+#define POWER_STAGE_REDUCE_CHECK_PERIOD_SECONDS		20
+#endif
 #define EOC_CHECK_PERIOD_MS	10000
 static irqreturn_t
 qpnp_chg_vbatdet_lo_irq_handler(int irq, void *_chip)
 {
 	struct qpnp_chg_chip *chip = _chip;
+#ifdef CONFIG_ANDROID_INTF_ALARM_DEV
+	ktime_t kt;
+#else
+  	struct timespec ts;
+#endif
 	u8 chg_sts = 0;
 	int rc;
 
@@ -1707,6 +1717,11 @@ qpnp_chg_regulator_batfet_set(struct qpnp_chg_chip *chip, bool enable)
 	return rc;
 }
 
+#ifdef CONFIG_ANDROID_INTF_ALARM_DEV
+#define POWER_STAGE_REDUCE_CHECK_PERIOD_NS      (20LL * NSEC_PER_SEC)
+#else
+#define POWER_STAGE_REDUCE_CHECK_PERIOD_SECONDS		20
+#endif
 #define USB_WALL_THRESHOLD_MA	500
 #define ENUM_T_STOP_BIT		BIT(0)
 #define USB_5V_UV	5000000
@@ -1717,6 +1732,11 @@ qpnp_chg_usb_usbin_valid_irq_handler(int irq, void *_chip)
 	struct qpnp_chg_chip *chip = _chip;
 	int usb_present, host_mode, usbin_health;
 	u8 psy_health_sts;
+#ifdef CONFIG_ANDROID_INTF_ALARM_DEV
+	ktime_t kt;
+#else
+  	struct timespec ts;
+#endif
 
 	usb_present = qpnp_chg_is_usb_chg_plugged_in(chip);
 	host_mode = qpnp_chg_is_otg_en_set(chip);
@@ -2077,10 +2097,20 @@ bypass_vbatdet_comp(struct qpnp_chg_chip *chip, bool bypass)
 	return rc;
 }
 
+#ifdef CONFIG_ANDROID_INTF_ALARM_DEV
+#define POWER_STAGE_REDUCE_CHECK_PERIOD_NS      (20LL * NSEC_PER_SEC)
+#else
+#define POWER_STAGE_REDUCE_CHECK_PERIOD_SECONDS		20
+#endif
 static irqreturn_t
 qpnp_chg_chgr_chg_fastchg_irq_handler(int irq, void *_chip)
 {
 	struct qpnp_chg_chip *chip = _chip;
+#ifdef CONFIG_ANDROID_INTF_ALARM_DEV
+	ktime_t kt;
+#else
+  	struct timespec ts;
+#endif
 	bool fastchg_on = false;
 
 	fastchg_on = qpnp_chg_is_fastchg_on(chip);
