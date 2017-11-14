@@ -373,6 +373,39 @@ int qpnp_pon_trigger_config(enum pon_trigger_source pon_src, bool enable)
 }
 EXPORT_SYMBOL(qpnp_pon_trigger_config);
 
+#ifdef CONFIG_QPNP_SCPOWER_ON
+/**
+ * qpnp_pon_check_kpdpwr - Check KPDPWR_ON: press or release
+ *
+ * Returns 0:success, other:failure
+ * @state: Return 1(press) or 0(release)
+ */
+int qpnp_pon_check_kpdpwr(int *state)
+{
+	int rc;
+	u8 pon_rt_sts = 0;
+	struct qpnp_pon *pon = sys_reset_dev;
+
+	rc = spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid,
+				QPNP_PON_RT_STS(pon->base), &pon_rt_sts, 1);
+	if (rc) {
+		dev_err(&pon->spmi->dev, "Unable to read PON RT status\n");
+		return rc;
+	}
+
+	if (pon_rt_sts & QPNP_PON_KPDPWR_N_SET) {
+		/* press */
+		*state = 1;
+	} else {
+		/* release */
+		*state = 0;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(qpnp_pon_check_kpdpwr);
+#endif
+
 static struct qpnp_pon_config *
 qpnp_get_cfg(struct qpnp_pon *pon, u32 pon_type)
 {
@@ -412,6 +445,9 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	switch (cfg->pon_type) {
 	case PON_KPDPWR:
 		pon_rt_bit = QPNP_PON_KPDPWR_N_SET;
+#ifdef CONFIG_QPNP_SCPOWER_ON
+		printk(KERN_INFO "pwrkey: %s\n", (pon_rt_sts & pon_rt_bit) ? "press" : "release");
+#endif
 		break;
 	case PON_RESIN:
 		pon_rt_bit = QPNP_PON_RESIN_N_SET;

@@ -22,6 +22,10 @@
 #include <linux/qpnp/vibrator.h>
 #include "../../staging/android/timed_output.h"
 
+#ifdef CONFIG_QPNP_SCVIBRATOR
+#include "sharp/sh_boot_manager.h"
+#endif /* CONFIG_QPNP_SCVIBRATOR */
+
 #define QPNP_VIB_VTG_CTL(base)		(base + 0x41)
 #define QPNP_VIB_EN_CTL(base)		(base + 0x46)
 
@@ -158,6 +162,10 @@ static int qpnp_vib_set(struct qpnp_vib *vib, int on)
 
 static void qpnp_vib_enable(struct timed_output_dev *dev, int value)
 {
+#ifdef CONFIG_QPNP_SCVIBRATOR
+	unsigned short bootmode = sh_boot_get_bootmode();
+#endif /* CONFIG_QPNP_SCVIBRATOR */
+
 	struct qpnp_vib *vib = container_of(dev, struct qpnp_vib,
 					 timed_dev);
 
@@ -167,8 +175,19 @@ static void qpnp_vib_enable(struct timed_output_dev *dev, int value)
 	if (value == 0)
 		vib->state = 0;
 	else {
+#ifdef CONFIG_QPNP_SCVIBRATOR
+		if (bootmode == 0) {
+			value = (value > vib->timeout ?
+					 vib->timeout : value);
+			printk( KERN_ERR "[%s][ sh_boot_get_bootmode == 0 ] vib timeout_ms = %d ms\n", __func__, value);
+		} else if (bootmode == SH_BOOT_NORMAL) {
+			value = (value > vib->timeout ?
+					 vib->timeout : value);
+		}
+#else /* CONFIG_QPNP_SCVIBRATOR */
 		value = (value > vib->timeout ?
 				 vib->timeout : value);
+#endif /* CONFIG_QPNP_SCVIBRATOR */
 		vib->state = 1;
 		hrtimer_start(&vib->vib_timer,
 			      ktime_set(value / 1000, (value % 1000) * 1000000),
@@ -187,14 +206,26 @@ static void qpnp_vib_update(struct work_struct *work)
 
 static int qpnp_vib_get_time(struct timed_output_dev *dev)
 {
+#ifdef CONFIG_QPNP_SCVIBRATOR
+	int rc = 0;
+#endif /* CONFIG_QPNP_SCVIBRATOR */
+
 	struct qpnp_vib *vib = container_of(dev, struct qpnp_vib,
 							 timed_dev);
 
+#ifdef CONFIG_QPNP_SCVIBRATOR
+	if (hrtimer_active(&vib->vib_timer)) {
+		ktime_t r = hrtimer_get_remaining(&vib->vib_timer);
+		rc = (int)ktime_to_us(r);
+	}
+	return rc;
+#else /* CONFIG_QPNP_SCVIBRATOR */
 	if (hrtimer_active(&vib->vib_timer)) {
 		ktime_t r = hrtimer_get_remaining(&vib->vib_timer);
 		return (int)ktime_to_us(r);
 	} else
 		return 0;
+#endif /* CONFIG_QPNP_SCVIBRATOR */
 }
 
 static enum hrtimer_restart qpnp_vib_timer_func(struct hrtimer *timer)

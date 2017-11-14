@@ -123,7 +123,11 @@ static struct wcd9xxx_mbhc_config mbhc_cfg = {
 	.mclk_rate = TAIKO_EXT_CLK_RATE,
 	.gpio = 0,
 	.gpio_irq = 0,
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-004 */
+	.gpio_level_insert = 0,
+#else
 	.gpio_level_insert = 1,
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 07-004 */
 	.detect_extn_cable = true,
 	.micbias_enable_flags = 1 << MBHC_MICBIAS_ENABLE_THRESHOLD_HEADSET,
 	.insert_detect = true,
@@ -233,6 +237,9 @@ static int msm8974_liquid_ext_spk_power_amp_init(void)
 		}
 		gpio_direction_output(ext_spk_amp_gpio, 0);
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-003 */
+		pr_debug("%s: ext_spk_amp_gpio = %d\n", __func__, ext_spk_amp_gpio);
+#else	/* CONFIG_SH_AUDIO_DRIVER */ /* 07-003 */
 		if (ext_spk_amp_regulator == NULL) {
 			ext_spk_amp_regulator = regulator_get(&spdev->dev,
 									"qcom,ext-spk-amp");
@@ -245,6 +252,7 @@ static int msm8974_liquid_ext_spk_power_amp_init(void)
 				return PTR_ERR(ext_spk_amp_regulator);
 			}
 		}
+#endif	/* CONFIG_SH_AUDIO_DRIVER */ /* 07-003 */
 	}
 
 	ext_ult_spk_amp_gpio = of_get_named_gpio(spdev->dev.of_node,
@@ -289,16 +297,20 @@ static void msm8974_liquid_ext_ult_spk_power_amp_enable(u32 on)
 static void msm8974_liquid_ext_spk_power_amp_enable(u32 on)
 {
 	if (on) {
+#ifndef CONFIG_SH_AUDIO_DRIVER /* 07-003 */
 		if (regulator_enable(ext_spk_amp_regulator))
 			pr_err("%s: enable failed ext_spk_amp_reg\n",
 				__func__);
+#endif	/* CONFIG_SH_AUDIO_DRIVER */ /* 07-003 */
 		gpio_direction_output(ext_spk_amp_gpio, on);
 		/*time takes enable the external power amplifier*/
 		usleep_range(EXT_CLASS_D_EN_DELAY,
 			     EXT_CLASS_D_EN_DELAY + EXT_CLASS_D_DELAY_DELTA);
 	} else {
 		gpio_direction_output(ext_spk_amp_gpio, on);
+#ifndef CONFIG_SH_AUDIO_DRIVER /* 07-003 */
 		regulator_disable(ext_spk_amp_regulator);
+#endif	/* CONFIG_SH_AUDIO_DRIVER */ /* 07-003 */
 		/*time takes disable the external power amplifier*/
 		usleep_range(EXT_CLASS_D_DIS_DELAY,
 			     EXT_CLASS_D_DIS_DELAY + EXT_CLASS_D_DELAY_DELTA);
@@ -413,6 +425,13 @@ static int msm8974_liquid_ext_spk_power_amp_on(u32 spk)
 			 __func__, spk);
 
 		msm8974_ext_spk_pamp |= spk;
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-003 */
+		if (msm8974_ext_spk_pamp & LO_2_SPK_AMP) {
+			if (ext_spk_amp_gpio >= 0) {
+				msm8974_liquid_ext_spk_power_amp_enable(1);
+			}
+		}
+#else	/* CONFIG_SH_AUDIO_DRIVER */ /* 07-003 */
 		if ((msm8974_ext_spk_pamp & LO_1_SPK_AMP) &&
 		    (msm8974_ext_spk_pamp & LO_3_SPK_AMP) &&
 		    (msm8974_ext_spk_pamp & LO_2_SPK_AMP) &&
@@ -421,6 +440,7 @@ static int msm8974_liquid_ext_spk_power_amp_on(u32 spk)
 			    msm8974_liquid_dock_dev &&
 			    msm8974_liquid_dock_dev->dock_plug_det == 0)
 				msm8974_liquid_ext_spk_power_amp_enable(1);
+#endif	/* CONFIG_SH_AUDIO_DRIVER */ /* 07-003 */
 		rc = 0;
 	} else  {
 		pr_err("%s: Invalid external speaker ampl. spk = 0x%x\n",
@@ -488,12 +508,20 @@ static void msm8974_liquid_ext_spk_power_amp_off(u32 spk)
 		pr_debug("%s Left and right speakers case spk = 0x%08x",
 				  __func__, spk);
 		msm8974_ext_spk_pamp &= ~spk;
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-003 */
+		if (!msm8974_ext_spk_pamp) {
+			if (ext_spk_amp_gpio >= 0) {
+				msm8974_liquid_ext_spk_power_amp_enable(0);
+			}
+		}
+#else	/* CONFIG_SH_AUDIO_DRIVER */ /* 07-003 */
 		if (!msm8974_ext_spk_pamp) {
 			if (ext_spk_amp_gpio >= 0 &&
 				msm8974_liquid_dock_dev != NULL &&
 				msm8974_liquid_dock_dev->dock_plug_det == 0)
 				msm8974_liquid_ext_spk_power_amp_enable(0);
 		}
+#endif	/* CONFIG_SH_AUDIO_DRIVER */ /* 07-003 */
 
 	} else  {
 
@@ -701,6 +729,11 @@ static const struct snd_soc_dapm_widget msm8974_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("ANCRight Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("ANCLeft Headset Mic", NULL),
+#ifdef CONFIG_SH_AUDIO_DRIVER
+/* SH_AUDIO_DRIVER-> */ /* 07-001 */
+	SND_SOC_DAPM_MIC("Secondary Mic", NULL),
+/* SH_AUDIO_DRIVER<- */ /* 07-001 */
+#endif
 	SND_SOC_DAPM_MIC("Analog Mic4", NULL),
 	SND_SOC_DAPM_MIC("Analog Mic6", NULL),
 	SND_SOC_DAPM_MIC("Analog Mic7", NULL),

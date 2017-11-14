@@ -20,6 +20,10 @@
 #include <linux/delay.h>
 #include <linux/sort.h>
 
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00019 */
+#include <sharp/sh_boot_manager.h>
+#endif /* CONFIG_SHLCDC_BOARD */
+
 #include "mdss_fb.h"
 #include "mdss_mdp.h"
 #include "mdss_debug.h"

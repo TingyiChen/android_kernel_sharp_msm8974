@@ -1138,6 +1138,18 @@ config MACH_FSM9XXX_SURF
 	  chipset based SURF evaluation board and
 	  FFA board.
 
+config SHARP
+	select ARCH_MSM8974
+	bool "SHARP"
+	help
+	  Support for SHARP Devices.
+
+config MACH_EBZ
+	select SHARP
+	bool "SHARP EBZ"
+	help
+	  Support for Sharp ebz999zz.
+
 endmenu
 
 config MSM_STACKED_MEMORY
@@ -3043,6 +3055,15 @@ config KRAIT_REGULATOR
 	 line from the PMIC. This supply line is powered by multiple
 	 regulators running in ganged mode inside the PMIC. Enable
 	 this option to support such configurations.
+
+config SHSYS_CUST
+       bool "SHARP SYSTEM CUSTOMIZE"
+       default n
+
+config SHBOOT_CUST
+       bool "SHARP BOOT CUSTOMIZE"
+       depends on SHSYS_CUST
+
 endif
 
 config KERNEL_TEXT_MPU_PROT
@@ -3052,3 +3073,4 @@ config KERNEL_TEXT_MPU_PROT
           sections early in boot. Read access is permitted to
           all masters; Write access is only permited to the
           secure world.
+

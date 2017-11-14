@@ -720,7 +720,9 @@
 		qcom,gpio-cs0  = <&msmgpio 55 0>;
 
 		qcom,infinite-mode = <0>;
-		qcom,use-bam;
+/* BSP delete */
+/*		qcom,use-bam;*/
+/* BSP delete */
 		qcom,ver-reg-exists;
 		qcom,bam-consumer-pipe-index = <18>;
 		qcom,bam-producer-pipe-index = <19>;
@@ -866,12 +868,18 @@
 			"AIF4 MAD", "MCLK",
 			"AMIC1", "MIC BIAS1 Internal1",
 			"MIC BIAS1 Internal1", "Handset Mic",
+/* SH_AUDIO_DRIVER-> */	/*06-001*/
 			"AMIC2", "MIC BIAS2 External",
 			"MIC BIAS2 External", "Headset Mic",
-			"AMIC3", "MIC BIAS2 External",
-			"MIC BIAS2 External", "ANCRight Headset Mic",
-			"AMIC4", "MIC BIAS2 External",
-			"MIC BIAS2 External", "ANCLeft Headset Mic",
+			/* "AMIC3", "MIC BIAS2 External", */
+			/* "MIC BIAS2 External", "ANCRight Headset Mic", */
+			"AMIC3", "MIC BIAS1 External",
+			"MIC BIAS1 External", "Handset Mic",
+			/* "AMIC4", "MIC BIAS2 External", */
+			/* "MIC BIAS2 External", "ANCLeft Headset Mic", */
+			"AMIC4", "MIC BIAS3 External",
+			"MIC BIAS2 External", "Secondary Mic",
+/* SH_AUDIO_DRIVER<- */	 /*06-001*/
 			"DMIC1", "MIC BIAS1 External",
 			"MIC BIAS1 External", "Digital Mic1",
 			"DMIC2", "MIC BIAS1 External",

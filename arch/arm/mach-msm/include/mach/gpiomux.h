@@ -169,6 +169,12 @@ int msm_gpiomux_write(unsigned gpio, enum msm_gpiomux_setting which,
  */
 void __msm_gpiomux_write(unsigned gpio, struct gpiomux_setting val);
 
+#ifdef CONFIG_SHSYS_CUST
+void sh_msm_gpiomux_install(struct msm_gpiomux_config *configs, unsigned nconfigs);
+int sh_msm_gpiomux_write(unsigned gpio, enum msm_gpiomux_setting which,
+	struct gpiomux_setting *setting);
+#endif	/* CONFIG_SHSYS_CUST */
+
 /* Functions that provide an API for drivers to read from and write to
  * miscellaneous TLMM registers.
  */
@@ -201,6 +207,17 @@ static inline int msm_gpiomux_write(unsigned gpio,
 {
 	return -ENOSYS;
 }
+
+#ifdef CONFIG_SHSYS_CUST
+static inline void
+sh_msm_gpiomux_install(struct msm_gpiomux_config *configs, unsigned nconfigs) {}
+
+static inline int sh_msm_gpiomux_write(unsigned gpio,
+	enum msm_gpiomux_setting which, struct gpiomux_setting *setting)
+{
+	return -ENOSYS;
+}
+#endif	/* CONFIG_SHSYS_CUST */
 
 static inline int msm_tlmm_misc_reg_read(enum msm_tlmm_misc_reg misc_reg)
 {

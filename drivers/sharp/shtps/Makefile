@@ -1,0 +1,1 @@
+obj-$(CONFIG_SHTPS_SY3X00_DEV)	+= sy3000/

@@ -237,6 +237,16 @@ enum {
 /* Count of the number of MDP_FB_PAGE_PROTECTION_... values. */
 #define MDP_NUM_FB_PAGE_PROTECTION_VALUES        (5)
 
+enum {
+	MSMFB_BASE_FPS_LOW_DISABLE,
+	MSMFB_BASE_FPS_LOW_ENABLE,
+};
+
+#define MSMFB_SET_SSPP      _IOW(MSMFB_IOCTL_MAGIC, 170, struct mdp_overlay_pp_params)
+#define MSMFB_PANEL_STATE_CHG_WAIT _IOW(MSMFB_IOCTL_MAGIC, 171, unsigned int)
+#define MSMFB_CHANGE_BASE_FPS_LOW  _IOW(MSMFB_IOCTL_MAGIC, 182, unsigned int)
+
+
 struct mdp_rect {
 	uint32_t x;
 	uint32_t y;

@@ -105,6 +105,19 @@
 #define FLASH_FAULT_DETECT(base)	(base + 0x51)
 #define FLASH_PERIPHERAL_SUBTYPE(base)	(base + 0x05)
 #define FLASH_CURRENT_RAMP(base)	(base + 0x54)
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#define FLASH_WATCHDOG_TIMER(base)	(base + 0x49)
+#define FLASH_ALT_RAMP_DN(base)		(base + 0x55)
+#define FLASH_VPH_PWR_DROOP(base)	(base + 0x5A)
+#define	FLASH_WATCHDOG_TIMER_MASK	0x1F
+#define	FLASH_ALT_RAMP_DN_MASK		0xFF
+#define	FLASH_VPH_PWR_DROOP_MASK	0xF3
+#define	FLASH_WATCHDOG_TIMER_VAL	0x00
+#define	FLASH_ALT_RAMP_DN_VAL		0x00
+#define	FLASH_VPH_PWR_DROOP_VAL		0xF0
+#define FLASH_CLAMP_CURR_VAL		0x03
+#define FLASH_SAFETY_TIMER_1000MS	0x63
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 #define FLASH_MAX_LEVEL			0x4F
 #define TORCH_MAX_LEVEL			0x0F
@@ -134,7 +147,10 @@
 #define FLASH_ENABLE_LED_1		0xA0
 #define FLASH_INIT_MASK			0xE0
 #define	FLASH_SELFCHECK_ENABLE		0x80
-#define FLASH_RAMP_STEP_27US		0xBF
+/* SHLOCAL_CAMERA_DRIVERS -> */
+//#define FLASH_RAMP_STEP_27US		0xBF
+#define FLASH_RAMP_STEP_27US		0xB8
+/* SHLOCAL_CAMERA_DRIVERS -> */
 
 #define FLASH_HW_SW_STROBE_SEL_MASK	0x04
 #define FLASH_STROBE_MASK		0xC7
@@ -1018,6 +1034,18 @@ static int qpnp_flash_set(struct qpnp_led_data *led)
 					"Torch reg write failed(%d)\n", rc);
 				goto error_reg_write;
 			}
+
+/* SHLOCAL_CAMERA_DRIVERS-> */
+			rc = qpnp_led_masked_write(led,
+				FLASH_CLAMP_CURR(led->base),
+				FLASH_CURRENT_MASK,
+				FLASH_CLAMP_CURR_VAL);
+			if (rc) {
+				dev_err(&led->spmi_dev->dev,
+					"Clamp current reg write failed(%d)\n", rc);
+				goto error_reg_write;
+			}
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 			rc = qpnp_led_masked_write(led,
 				led->flash_cfg->current_addr,
@@ -2546,6 +2574,44 @@ static int __devinit qpnp_flash_init(struct qpnp_led_data *led)
 	}
 
 	led->flash_cfg->strobe_type = 0;
+
+/* SHLOCAL_CAMERA_DRIVERS-> */
+	rc = qpnp_led_masked_write(led, FLASH_SAFETY_TIMER(led->base),
+		FLASH_SAFETY_TIMER_MASK, FLASH_SAFETY_TIMER_1000MS);
+	if (rc) {
+		dev_err(&led->spmi_dev->dev,
+			"Clamp curr reg write failed(%d)\n", rc);
+		return rc;
+	}
+	rc = qpnp_led_masked_write(led, FLASH_MAX_CURR(led->base),
+		FLASH_CURRENT_MASK, FLASH_MAX_LEVEL);
+	if (rc) {
+		dev_err(&led->spmi_dev->dev,
+			"Clamp curr reg write failed(%d)\n", rc);
+		return rc;
+	}
+	rc = qpnp_led_masked_write(led, FLASH_WATCHDOG_TIMER(led->base),
+		FLASH_WATCHDOG_TIMER_MASK, FLASH_WATCHDOG_TIMER_VAL);
+	if (rc) {
+		dev_err(&led->spmi_dev->dev,
+			"WatchDog Timer reg write failed(%d)\n", rc);
+		return rc;
+	}
+	rc = qpnp_led_masked_write(led, FLASH_ALT_RAMP_DN(led->base),
+		FLASH_ALT_RAMP_DN_MASK, FLASH_ALT_RAMP_DN_VAL);
+	if (rc) {
+		dev_err(&led->spmi_dev->dev,
+			"Alternate ramp dn reg write failed(%d)\n", rc);
+		return rc;
+	}
+	rc = qpnp_led_masked_write(led, FLASH_VPH_PWR_DROOP(led->base),
+		FLASH_VPH_PWR_DROOP_MASK, FLASH_VPH_PWR_DROOP_VAL);
+	if (rc) {
+		dev_err(&led->spmi_dev->dev,
+			"VPH power droop threshold reg write failed(%d)\n", rc);
+		return rc;
+	}
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 	/* dump flash registers */
 	qpnp_dump_regs(led, flash_debug_regs, ARRAY_SIZE(flash_debug_regs));

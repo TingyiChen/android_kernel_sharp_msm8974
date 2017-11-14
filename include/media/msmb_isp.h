@@ -13,6 +13,7 @@
 #define __MSMB_ISP__
 
 #include <linux/videodev2.h>
+#include <stdbool.h>
 
 #define MAX_PLANES_PER_STREAM 3
 #define MAX_NUM_STREAM 7
@@ -165,11 +166,13 @@ enum msm_vfe_axi_stream_cmd {
 	STOP_STREAM,
 	START_STREAM,
 	STOP_IMMEDIATELY,
+	STOP_STREAM_SOF_FREEZE,
 };
 
 struct msm_vfe_axi_stream_cfg_cmd {
 	uint8_t num_streams;
 	uint32_t stream_handle[MAX_NUM_STREAM];
+	bool is_sof_freeze;
 	enum msm_vfe_axi_stream_cmd cmd;
 };
 
@@ -221,10 +224,12 @@ struct msm_vfe_stats_stream_request_cmd {
 
 struct msm_vfe_stats_stream_release_cmd {
 	uint32_t stream_handle;
+	bool is_sof_freeze;
 };
 struct msm_vfe_stats_stream_cfg_cmd {
 	uint8_t num_streams;
 	uint32_t stream_handle[MSM_ISP_STATS_MAX];
+	bool is_sof_freeze;
 	uint8_t enable;
 	uint32_t stats_burst_len;
 };

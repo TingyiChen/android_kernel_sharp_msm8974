@@ -243,6 +243,12 @@
 			<0xff 126>,  /* bam_irq[0] */
 			<0xff 140>,  /* uart_dm_intr */
 			<0xff 146>,  /* uart_dm_intr: blsp2_uart_2_irq */
+/* CONFIG_SHSYS_CUST Add Start */
+			<0xff 151>,  /* f99d8000.msm_tspp */
+			<0xff 152>,  /* f99d8000.msm_tspp */
+			<0xff 153>,  /* f99d8000.msm_tspp */
+			<0xff 154>,  /* sps */
+/* CONFIG_SHSYS_CUST Add End */
 			<0xff 155>,  /* sdcc_irq[0] */
 			<0xff 157>,  /* sdcc_irq[0] */
 			<0xff 159>,  /* sdcc_irq[0] */

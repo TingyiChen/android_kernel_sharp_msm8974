@@ -267,6 +267,18 @@ MODULE_PARM_DESC(spkr_drv_wrnd,
 
 #define TAIKO_SLIM_PGD_PORT_INT_TX_EN0 (TAIKO_SLIM_PGD_PORT_INT_EN0 + 2)
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-005 */
+#define TABLA_DEBUGMODE_MSK       0x01
+#define TABLA_DEBUGMODE_ON        0x01  
+#define TABLA_DEBUGMODE_OFF       0x00  
+#define TABLA_MICBIAS_MSK      0x02
+#define TABLA_MICBIAS_ON      0x02  
+#define TABLA_MICBIAS_OFF       0x00  
+#define TABLA_CODECSTOP_MSK     0x04
+#define TABLA_CODECSTOP_ON      0x04  
+#define TABLA_CODECSTOP_OFF     0x00 
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 07-005 */
+
 enum {
 	AIF1_PB = 0,
 	AIF1_CAP,
@@ -513,6 +525,59 @@ static const struct comp_sample_dependent_params comp_samp_params[] = {
 		.rms_meter_resamp_fact = 0x50,
 	},
 };
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-005 */
+struct taiko_priv *taiko_switch;
+static int bias_mode_for_testmode = 0;
+static bool irq_mode_for_testmode  = true;
+
+int tabla_codec_get_bias_mode(void)
+{
+	return bias_mode_for_testmode;
+}
+EXPORT_SYMBOL_GPL(tabla_codec_get_bias_mode);
+
+void tabla_codec_set_bias_mode(int mode)
+{
+	struct wcd9xxx_mbhc mbhc = taiko_switch->mbhc;
+	bias_mode_for_testmode = mode;
+
+	if(irq_mode_for_testmode){
+		if((bias_mode_for_testmode & TABLA_CODECSTOP_MSK) == TABLA_CODECSTOP_ON ){
+			wcd9xxx_disable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->insertion);
+			wcd9xxx_disable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->poll_plug_rem);
+			wcd9xxx_disable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->hs_jack_switch);
+			irq_mode_for_testmode = false;
+		}
+	}else{
+		 if((bias_mode_for_testmode & TABLA_CODECSTOP_MSK) == TABLA_CODECSTOP_OFF){
+			wcd9xxx_enable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->insertion);
+			wcd9xxx_enable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->poll_plug_rem);
+			wcd9xxx_enable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->hs_jack_switch);
+			irq_mode_for_testmode = true;
+		}
+	}
+	return;
+}
+EXPORT_SYMBOL_GPL(tabla_codec_set_bias_mode);
+
+int msm_headset_hp_state(void)
+{
+	struct wcd9xxx_mbhc mbhc = taiko_switch->mbhc;
+	
+	return mbhc.headset_jack.status;
+}
+EXPORT_SYMBOL_GPL(msm_headset_hp_state);
+
+int msm_headset_bu_state(void)
+{
+	struct wcd9xxx_mbhc mbhc = taiko_switch->mbhc;
+	
+	return mbhc.button_jack.status;
+}
+EXPORT_SYMBOL_GPL(msm_headset_bu_state);
+
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 07-005 */
 
 static unsigned short rx_digital_gain_reg[] = {
 	TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL,
@@ -2825,6 +2890,9 @@ static int taiko_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 	char *internal2_text = "Internal2";
 	char *internal3_text = "Internal3";
 	enum wcd9xxx_notify_event e_post_off, e_pre_on, e_post_on;
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-040 */
+	struct wcd9xxx_mbhc mbhc = taiko->mbhc;
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* 07-040 */
 
 	pr_debug("%s: w->name %s event %d\n", __func__, w->name, event);
 	if (strnstr(w->name, "MIC BIAS1", sizeof("MIC BIAS1"))) {
@@ -2875,6 +2943,12 @@ static int taiko_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 		else if (strnstr(w->name, internal3_text, 30))
 			snd_soc_update_bits(codec, micb_int_reg, 0x3, 0x3);
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-040 */
+		if (micb_ctl_reg == WCD9XXX_A_MICB_1_CTL && mbhc.current_plug == PLUG_TYPE_HEADSET) {
+			snd_soc_update_bits(codec, TAIKO_A_MICB_2_CTL, 0x80, 0x80);
+		}
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* 07-040 */
+
 		if (taiko->mbhc_started && micb_ctl_reg == TAIKO_A_MICB_2_CTL) {
 			if (++taiko->micb_2_users == 1) {
 				if (taiko->resmgr.pdata->
@@ -2923,6 +2997,15 @@ static int taiko_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec, micb_ctl_reg, 1 << w->shift,
 					    0);
 		}
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-040 */
+		if (micb_ctl_reg == WCD9XXX_A_MICB_1_CTL){
+			u8 mbhc_micb_ctl_val = snd_soc_read(codec, TAIKO_A_MICB_2_CTL);
+			if (mbhc_micb_ctl_val & 0x80) {
+				snd_soc_update_bits(codec, TAIKO_A_MICB_2_CTL, 0x80, 0x00);
+			}
+		}
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* 07-040 */
 
 		/* Let MBHC module know so micbias switch to be off */
 		wcd9xxx_resmgr_notifier_call(&taiko->resmgr, e_post_off);
@@ -7338,6 +7421,11 @@ static int taiko_codec_probe(struct snd_soc_codec *codec)
 	mutex_unlock(&dapm->codec->mutex);
 
 	codec->ignore_pmdown_time = 1;
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-005 */
+    taiko_switch = taiko;
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 07-005 */
+
 	return ret;
 
 err_irq:

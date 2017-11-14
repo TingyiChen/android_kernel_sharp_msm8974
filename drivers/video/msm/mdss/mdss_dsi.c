@@ -1502,7 +1502,11 @@ int dsi_panel_device_register(struct device_node *pan_node,
 		rc = gpio_tlmm_config(GPIO_CFG(
 				ctrl_pdata->disp_te_gpio, 1,
 				GPIO_CFG_INPUT,
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00020 */ 
+				GPIO_CFG_NO_PULL,
+#else  /* CONFIG_SHLCDC_BOARD */ 
 				GPIO_CFG_PULL_DOWN,
+#endif /* CONFIG_SHLCDC_BOARD */ 
 				GPIO_CFG_2MA),
 				GPIO_CFG_ENABLE);
 

@@ -1,0 +1,10 @@
+obj-$(CONFIG_SHSYS_CUST)	+= shsys/
+obj-$(CONFIG_SHBOOT_CUST)	+= shboot/
+obj-y				+= mfc/
+obj-$(CONFIG_SHDIAG)		+= shdiag/
+obj-$(CONFIG_SHLCDC_BOARD)	+= shdisp/
+obj-$(CONFIG_SENSORS_PROXIMITY) += proximity/
+obj-$(CONFIG_TOUCHSCREEN_SHTPS) += shtps/
+obj-$(CONFIG_SHIRDA)		+= shirda/
+obj-$(CONFIG_SHMDS)		+= shmds/
+obj-$(CONFIG_SHCAMERA_PICT)	+= shcamled/

@@ -23,6 +23,9 @@
 #include <linux/err.h>
 
 #include "mdss_dsi.h"
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00005 */
+#include "mdss_shdisp.h"
+#endif /* CONFIG_SHLCDC_BOARD */
 
 #define DT_CMD_HDR 6
 
@@ -39,6 +42,7 @@ void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 	}
 }
 
+#ifndef CONFIG_SHLCDC_BOARD /* CUST_ID_00009 */
 static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	int ret;
@@ -96,6 +100,7 @@ static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 		pr_err("%s: pwm_enable() failed err=%d\n", __func__, ret);
 	ctrl->pwm_enabled = 1;
 }
+#endif /* CONFIG_SHLCDC_BOARD */
 
 static char dcs_cmd[2] = {0x54, 0x00}; /* DTYPE_DCS_READ */
 static struct dsi_cmd_desc dcs_read_cmd = {
@@ -125,6 +130,7 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 	return 0;
 }
 
+#ifndef CONFIG_SHLCDC_BOARD	/* CUST_ID_00007 *//* CUST_ID_00009 */
 static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds)
 {
@@ -168,6 +174,7 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
+#endif	/* CONFIG_SHLCDC_BOARD */
 
 static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
@@ -357,9 +364,9 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 		pcmds = &ctrl_pdata->video2cmd;
 	else
 		pcmds = &ctrl_pdata->cmd2video;
-
+#ifndef CONFIG_SHLCDC_BOARD
 	mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds);
-
+#endif
 	return;
 }
 
@@ -385,6 +392,9 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	if ((bl_level < pdata->panel_info.bl_min) && (bl_level != 0))
 		bl_level = pdata->panel_info.bl_min;
 
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00009 */
+	mdss_shdisp_bkl_ctl(bl_level);
+#else /* CONFIG_SHLCDC_BOARD */
 	switch (ctrl_pdata->bklt_ctrl) {
 	case BL_WLED:
 		led_trigger_event(bl_led_trigger, bl_level);
@@ -410,10 +420,15 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 			__func__);
 		break;
 	}
+#endif /* CONFIG_SHLCDC_BOARD */
 }
 
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 {
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00005 */
+	mdss_shdisp_dsi_panel_on();
+	return 0;
+#else /* CONFIG_SHLCDC_BOARD */
 	struct mipi_panel_info *mipi;
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 
@@ -433,10 +448,16 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 	pr_debug("%s:-\n", __func__);
 	return 0;
+#endif /* CONFIG_SHLCDC_BOARD */
 }
 
 static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 {
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00007 */
+	mdss_shdisp_dsi_panel_off();
+
+	return 0;
+#else /* CONFIG_SHLCDC_BOARD */
 	struct mipi_panel_info *mipi;
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 
@@ -457,6 +478,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 
 	pr_debug("%s:-\n", __func__);
 	return 0;
+#endif /* CONFIG_SHLCDC_BOARD */
 }
 
 static void mdss_dsi_parse_lane_swap(struct device_node *np, char *dlane_swap)
@@ -1051,6 +1073,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		"qcom,mdss-dsi-border-color", &tmp);
 	pinfo->lcdc.border_clr = (!rc ? tmp : 0);
 	pinfo->bklt_ctrl = UNKNOWN_CTRL;
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00015 */
+	ctrl_pdata->bklt_ctrl = UNKNOWN_CTRL;
+#endif /* CONFIG_SHLCDC_BOARD */
 	data = of_get_property(np, "qcom,mdss-dsi-bl-pmic-control-type", NULL);
 	if (data) {
 		if (!strncmp(data, "bl_ctrl_wled", 12)) {
@@ -1287,8 +1312,12 @@ int mdss_dsi_panel_init(struct device_node *node,
 		return rc;
 	}
 
+#ifndef CONFIG_SHLCDC_BOARD /* CUST_ID_00016 */
 	if (!cmd_cfg_cont_splash)
 		pinfo->cont_splash_enabled = false;
+#else /* CONFIG_SHLCDC_BOARD */
+	pinfo->cont_splash_enabled = mdss_shdisp_get_disp_status();
+#endif /* CONFIG_SHLCDC_BOARD */
 	pr_info("%s: Continuous splash %s", __func__,
 		pinfo->cont_splash_enabled ? "enabled" : "disabled");
 

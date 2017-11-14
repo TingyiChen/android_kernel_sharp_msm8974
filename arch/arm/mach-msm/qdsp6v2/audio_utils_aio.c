@@ -154,10 +154,17 @@ static unsigned long audio_aio_ion_fixup(struct q6audio_aio *audio, void *addr,
 				__func__, audio, addr, len);
 		return 0;
 	}
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-053 */
+	if (ref_up)
+		region->ref_cnt = 1;
+	else
+		region->ref_cnt = 0;
+#else  /* CONFIG_SH_AUDIO_DRIVER */ /* 07-053 */
 	if (ref_up)
 		region->ref_cnt++;
 	else
 		region->ref_cnt--;
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 07-053 */
 	pr_debug("%s[%p]:found region %p ref_cnt %d\n",
 			__func__, audio, region, region->ref_cnt);
 	paddr = region->paddr + (addr - region->vaddr);
@@ -203,23 +210,48 @@ static int audio_aio_flush(struct q6audio_aio  *audio)
 		   it is not in pause state */
 		if (!(audio->drv_status & ADRV_STATUS_PAUSE)) {
 			rc = audio_aio_pause(audio);
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-053 */
+			if (rc < 0) {
+				pr_err("%s[%p}: pause cmd failed rc=%d\n",
+					__func__, audio,
+					rc);
+				goto fail;
+			}
+#else  /* CONFIG_SH_AUDIO_DRIVER */ /* 07-053 */
 			if (rc < 0)
 				pr_err("%s[%p}: pause cmd failed rc=%d\n",
 					__func__, audio,
 					rc);
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 07-053 */
 			else
 				audio->drv_status |= ADRV_STATUS_PAUSE;
 		}
 		rc = q6asm_cmd(audio->ac, CMD_FLUSH);
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-053 */
+		if (rc < 0) {
+			pr_err("%s[%p]: flush cmd failed rc=%d\n",
+				__func__, audio, rc);
+			goto fail;
+		}
+#else  /* CONFIG_SH_AUDIO_DRIVER */ /* 07-053 */
 		if (rc < 0)
 			pr_err("%s[%p]: flush cmd failed rc=%d\n",
 				__func__, audio, rc);
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 07-053 */
 		/* Not in stop state, reenable the stream */
 		if (audio->stopped == 0) {
 			rc = audio_aio_enable(audio);
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-053 */
+			if (rc) {
+				pr_err("%s[%p]:audio re-enable failed\n",
+					__func__, audio);
+				goto fail;
+			}
+#else  /* CONFIG_SH_AUDIO_DRIVER */ /* 07-053 */
 			if (rc)
 				pr_err("%s[%p]:audio re-enable failed\n",
 					__func__, audio);
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 07-053 */
 			else {
 				audio->enabled = 1;
 				if (audio->drv_status & ADRV_STATUS_PAUSE)
@@ -234,6 +266,10 @@ static int audio_aio_flush(struct q6audio_aio  *audio)
 	atomic_set(&audio->in_bytes, 0);
 	atomic_set(&audio->in_samples, 0);
 	return 0;
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 07-053 */
+fail:
+	return -EINVAL;
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 07-053 */
 }
 
 static int audio_aio_outport_flush(struct q6audio_aio *audio)

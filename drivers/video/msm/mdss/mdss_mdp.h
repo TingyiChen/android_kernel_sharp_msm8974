@@ -189,7 +189,11 @@ struct mdss_mdp_ctl {
 	int force_screen_state;
 	struct mdss_mdp_perf_params cur_perf;
 	struct mdss_mdp_perf_params new_perf;
+#ifndef	CONFIG_SHLCDC_BOARD /* CUST_ID_00052 */
+	int perf_status;
+#else /* CONFIG_SHLCDC_BOARD */
 	u32 perf_transaction_status;
+#endif /* CONFIG_SHLCDC_BOARD */
 
 	struct mdss_data_type *mdata;
 	struct msm_fb_data_type *mfd;
@@ -465,6 +469,11 @@ struct mdss_overlay_private {
 	struct mdss_mdp_vsync_handler vsync_retire_handler;
 	struct work_struct retire_work;
 	int retire_cnt;
+
+#ifdef	CONFIG_SHLCDC_BOARD /* CUST_ID_00017 */
+	int fpslow_count;
+#endif /* CONFIG_SHLCDC_BOARD */
+
 };
 
 /**
@@ -610,8 +619,13 @@ int mdss_mdp_mixer_handoff(struct mdss_mdp_ctl *ctl, u32 num,
 
 int mdss_mdp_scan_pipes(void);
 
+#ifndef	CONFIG_SHLCDC_BOARD /* CUST_ID_00052 */
+void mdss_mdp_ctl_perf_taken(struct mdss_mdp_ctl *ctl);
+void mdss_mdp_ctl_perf_done(struct mdss_mdp_ctl *ctl);
+#else /* CONFIG_SHLCDC_BOARD */
 void mdss_mdp_ctl_perf_set_transaction_status(struct mdss_mdp_ctl *ctl,
 	enum mdss_mdp_perf_state_type component, bool new_status);
+#endif /* CONFIG_SHLCDC_BOARD */
 void mdss_mdp_ctl_perf_release_bw(struct mdss_mdp_ctl *ctl);
 
 struct mdss_mdp_mixer *mdss_mdp_wb_mixer_alloc(int rotator);

@@ -1,0 +1,17 @@
+#
+# Kconfig for Invensense IIO testing hooks
+#
+
+config INV_TESTING
+    boolean "Invensense IIO testing hooks"
+# SHMDS_ID_0102_01 mod S
+#	depends on INV_MPU_IIO || INV_AMI306_IIO || INV_YAS530 || INV_HUB_IIO
+#	depends on MPU_SENSORS_MPU9150 || INV_AMI306_IIO || INV_YAS530 || INV_HUB_IIO
+	depends on MPU_SENSORS_MPU6515 || INV_AMI306_IIO || INV_YAS530 || INV_HUB_IIO
+# SHMDS_ID_0102_01 mod E
+    default n
+    help
+      This flag enables display of additional testing information from the
+      Invensense IIO drivers.
+      It also enables the I2C counters facility to perform IO profiling.
+      Some additional sysfs entries will appear when this flag is enabled.

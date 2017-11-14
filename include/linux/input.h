@@ -412,6 +412,15 @@ struct input_keymap_entry {
 #define KEY_F23			193
 #define KEY_F24			194
 
+#ifdef CONFIG_TOUCHSCREEN_SHTPS
+#define KEY_SWEEPON		198
+
+#define SW_GRIP_00	0x11
+#define SW_GRIP_01	0x12
+#define SW_GRIP_02	0x13
+
+#endif /* CONFIG_TOUCHSCREEN_SHTPS */
+
 #define KEY_PLAYCD		200
 #define KEY_PAUSECD		201
 #define KEY_PROG3		202

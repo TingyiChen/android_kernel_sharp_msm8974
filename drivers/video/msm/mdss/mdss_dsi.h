@@ -428,4 +428,10 @@ static inline struct mdss_dsi_ctrl_pdata *mdss_dsi_get_ctrl_by_index(int ndx)
 
 	return ctrl_list[ndx];
 }
+
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_0041 */
+void mipi_dsi_latency_deny_collapse(void);
+void mipi_dsi_latency_allow_collapse(void);
+#endif /* CONFIG_SHLCDC_BOARD */
+
 #endif /* MDSS_DSI_H */
