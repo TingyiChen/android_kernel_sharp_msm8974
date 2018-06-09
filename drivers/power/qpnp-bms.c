@@ -28,6 +28,10 @@
 #include <linux/qpnp/power-on.h>
 #include <linux/of_batterydata.h>
 
+#ifdef CONFIG_MACH_EBZ
+#include <linux/qpnp/qpnp-api.h>
+#endif
+
 /* BMS Register Offsets */
 #define REVISION1			0x0
 #define REVISION2			0x1
