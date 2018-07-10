@@ -3370,17 +3370,10 @@ int __init msm_thermal_late_init(void)
 	msm_thermal_add_psm_nodes();
 	msm_thermal_add_vdd_rstr_nodes();
 	msm_thermal_add_ocr_nodes();
-<<<<<<< HEAD
-	msm_thermal_add_default_temp_limit_nodes();
-=======
-<<<<<<< HEAD
-=======
 	msm_thermal_add_default_temp_limit_nodes();
 #ifdef CONFIG_ANDROID_INTF_ALARM_DEV
 	alarm_init(&thermal_rtc, ALARM_BOOTTIME, thermal_rtc_callback);
 #else
->>>>>>> 6ba61a1... msm: thermal: Update for alarmtimer changes
->>>>>>> 2d7b55097af... msm: thermal: Update for alarmtimer changes
 	alarm_init(&thermal_rtc, ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP,
 			thermal_rtc_callback);
 #endif

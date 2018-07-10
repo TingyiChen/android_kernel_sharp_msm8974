@@ -1381,7 +1381,7 @@ qpnp_chg_vbatdet_lo_irq_handler(int irq, void *_chip)
 {
 	struct qpnp_chg_chip *chip = _chip;
 #ifdef CONFIG_ANDROID_INTF_ALARM_DEV
-	ktime_t kt;
+//	ktime_t kt;
 #else
   	struct timespec ts;
 #endif
@@ -1733,7 +1733,7 @@ qpnp_chg_usb_usbin_valid_irq_handler(int irq, void *_chip)
 	int usb_present, host_mode, usbin_health;
 	u8 psy_health_sts;
 #ifdef CONFIG_ANDROID_INTF_ALARM_DEV
-	ktime_t kt;
+//	ktime_t kt;
 #else
   	struct timespec ts;
 #endif
@@ -2107,7 +2107,7 @@ qpnp_chg_chgr_chg_fastchg_irq_handler(int irq, void *_chip)
 {
 	struct qpnp_chg_chip *chip = _chip;
 #ifdef CONFIG_ANDROID_INTF_ALARM_DEV
-	ktime_t kt;
+//	ktime_t kt;
 #else
   	struct timespec ts;
 #endif
