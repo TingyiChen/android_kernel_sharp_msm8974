@@ -214,6 +214,9 @@ static ssize_t power_ro_lock_show(struct device *dev,
 
 	ret = snprintf(buf, PAGE_SIZE, "%d\n", locked);
 
+#ifdef CONFIG_MMC_CUST_SH
+	mmc_blk_put(md);
+#endif /* CONFIG_MMC_CUST_SH */
 	return ret;
 }
 
@@ -648,6 +651,14 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 		goto cmd_done;
 	}
 
+#ifdef CONFIG_MMC_SD_CUST_SH
+	if(!card){
+		pr_warning("mmc_blk_ioctl_cmd error return(-EINVAL) card structure is NULL\n");
+		err = -EINVAL;
+		goto cmd_done;
+	}
+#endif /* CONFIG_MMC_SD_CUST_SH */
+
 	cmd.opcode = idata->ic.opcode;
 	cmd.arg = idata->ic.arg;
 	cmd.flags = idata->ic.flags;
@@ -805,10 +816,22 @@ static int mmc_blk_ioctl_rpmb_cmd(struct block_device *bdev,
 
 	md = mmc_blk_get(bdev->bd_disk);
 	/* make sure this is a rpmb partition */
+#ifdef CONFIG_MMC_CUST_SH
+	if (!md) {
+		err = -EINVAL;
+		return err;
+	}
+
+	if (!(md->area_type & MMC_BLK_DATA_AREA_RPMB)) {
+		err = -EINVAL;
+		goto cmd_done;
+	}
+#else  /* CONFIG_MMC_CUST_SH */
 	if ((!md) || (!(md->area_type & MMC_BLK_DATA_AREA_RPMB))) {
 		err = -EINVAL;
 		return err;
 	}
+#endif /* CONFIG_MMC_CUST_SH */
 
 	idata = mmc_blk_ioctl_rpmb_copy_from_user(ic_ptr);
 	if (IS_ERR(idata)) {
@@ -1232,16 +1255,64 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 	return ERR_CONTINUE;
 }
 
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+#define MMC_BLK_MAX_RESET_CNT		10
+#define MMC_BLK_MAX_RESET_CNT_SD	1
+static int mmc_blk_set_retry_cnt(struct mmc_card *card, int param)
+{
+	static int retry_cnt[2] = {0, 0};
+	int retry_max_cnt[2] =
+		{MMC_BLK_MAX_RESET_CNT, MMC_BLK_MAX_RESET_CNT_SD};
+	unsigned int type;
+
+	if (mmc_card_mmc(card))
+		type = 0;
+	else if (mmc_card_sd(card))
+		type = 1;
+	else
+		return -EMEDIUMTYPE;
+
+	if (param < 0) {
+		retry_cnt[type] = 0;
+	} else if (param == 0) {
+		retry_cnt[type] = 0;
+	} else {
+		retry_cnt[type] += param;
+		if (retry_cnt[type] > retry_max_cnt[type]) {
+			retry_cnt[type] = 0;
+			return -EEXIST;
+		}
+		pr_warning("%s: retry count(%d)\n",
+			mmc_hostname(card->host), retry_cnt[type]);
+	}
+
+	return 0;
+}
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
+
 static int mmc_blk_reset(struct mmc_blk_data *md, struct mmc_host *host,
 			 int type)
 {
 	int err;
 
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+	err = mmc_blk_set_retry_cnt(host->card, 1);
+	if ((md->reset_done & type) && err)
+#else  /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 	if (md->reset_done & type)
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 		return -EEXIST;
 
 	md->reset_done |= type;
 	err = mmc_hw_reset(host);
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+	if (err)
+		pr_err("%s: recovery %d error!!\n",
+				mmc_hostname(host), err);
+	else
+		pr_info("%s: recovery success!!\n",
+				mmc_hostname(host));
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 	/* Ensure we switch back to the correct partition */
 	if (err != -EOPNOTSUPP) {
 		struct mmc_blk_data *main_md = mmc_get_drvdata(host->card);
@@ -1523,17 +1594,47 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	 */
 	if (!mmc_host_is_spi(card->host) && rq_data_dir(req) != READ) {
 		u32 status;
+#ifdef CONFIG_MMC_SD_CUST_SH
+		int i = 0;
+		int sleepy = 1;
+		unsigned int msec = 0;
+		unsigned long delay = jiffies + HZ;
+		int err = 0;
+#else /* CONFIG_MMC_SD_CUST_SH */
 		unsigned long timeout;
 
 		timeout = jiffies + msecs_to_jiffies(MMC_BLK_TIMEOUT_MS);
+#endif /* CONFIG_MMC_SD_CUST_SH */
+
 		do {
+#ifdef CONFIG_MMC_SD_CUST_SH
+			if (sleepy && (fls(i) > 11)) {
+				msec = (unsigned int)fls(i >> 11);
+				msleep(msec);
+
+				if (msec > 3 && ((i - 1) & i) == 0) {
+					pr_err("%s: start "
+						"sleep %u msecs\n",
+						req->rq_disk->disk_name,
+						msec);
+				}
+			}
+			err = get_card_status(card, &status, 5);
+#else /* CONFIG_MMC_SD_CUST_SH */
 			int err = get_card_status(card, &status, 5);
+#endif /* CONFIG_MMC_SD_CUST_SH */
 			if (err) {
 				pr_err("%s: error %d requesting status\n",
 				       req->rq_disk->disk_name, err);
 				return MMC_BLK_CMD_ERR;
 			}
-
+#ifdef CONFIG_MMC_SD_CUST_SH
+			if (time_after(jiffies, delay) && (fls(i) > 10)) {
+				pr_err("%s: Failed to get card ready i = %d, status = %d\n",
+				mmc_hostname(card->host), i, status);
+				break;
+			}
+#else /* CONFIG_MMC_SD_CUST_SH */
 			/* Timeout if the device never becomes ready for data
 			 * and never leaves the program state.
 			 */
@@ -1544,11 +1645,15 @@ static int mmc_blk_err_check(struct mmc_card *card,
 
 				return MMC_BLK_CMD_ERR;
 			}
+#endif /* CONFIG_MMC_SD_CUST_SH */
 			/*
 			 * Some cards mishandle the status bits,
 			 * so make sure to check both the busy
 			 * indication and the card state.
 			 */
+#ifdef CONFIG_MMC_SD_CUST_SH
+			i++;
+#endif /* CONFIG_MMC_SD_CUST_SH */
 		} while (!(status & R1_READY_FOR_DATA) ||
 			 (R1_CURRENT_STATE(status) == R1_STATE_PRG));
 	}
@@ -2567,6 +2672,9 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 				pr_warning("%s: retrying using single block read\n",
 					   req->rq_disk->disk_name);
 				disable_multi = 1;
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+				mmc_blk_set_retry_cnt(card, -1);
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 				break;
 			}
 			/*
@@ -2574,6 +2682,14 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			 * time, so we only reach here after trying to
 			 * read a single sector.
 			 */
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+			if (strncmp(mmc_hostname(card->host), HOST_MMC_SD, sizeof(HOST_MMC_SD)) != 0){
+				if (status == MMC_BLK_ECC_ERR) {
+					if (!mmc_blk_reset(md, card->host, type))
+						break;
+				}
+			}
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 			ret = blk_end_request(req, -EIO,
 						brq->data.blksz);
 			if (!ret)
@@ -2622,6 +2738,9 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 	}
 
  start_new_req:
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+	mmc_blk_set_retry_cnt(card, -1);
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 	if (rqc) {
 		if (mmc_card_removed(card)) {
 			if (mq_rq->packed_cmd == MMC_PACKED_NONE) {

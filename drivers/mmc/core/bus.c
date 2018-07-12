@@ -26,7 +26,15 @@
 #include "bus.h"
 
 #define to_mmc_driver(d)	container_of(d, struct mmc_driver, drv)
+#ifdef CONFIG_MMC_SD_CUST_SH
+#define RUNTIME_SUSPEND_DELAY_MS 6000
+#else
 #define RUNTIME_SUSPEND_DELAY_MS 10000
+#endif	/* CONFIG_MMC_SD_CUST_SH */
+
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+extern bool sh_mmc_pending_resume;
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 
 static ssize_t mmc_type_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -203,6 +211,13 @@ static int mmc_runtime_idle(struct device *dev)
 	int ret = 0;
 
 	if (mmc_use_core_runtime_pm(card->host)) {
+#ifdef CONFIG_PM_EMMC_CUST_SH
+		if (!(host->card && mmc_card_mmc(host->card))) {
+#endif /* CONFIG_PM_EMMC_CUST_SH */
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+		if( (host->card && mmc_card_sd( host->card )) &&
+			sh_mmc_pending_resume == false ){
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 		ret = pm_schedule_suspend(dev, card->idle_timeout);
 		if ((ret < 0) && (dev->power.runtime_error ||
 				  dev->power.disable_depth > 0)) {
@@ -211,6 +226,12 @@ static int mmc_runtime_idle(struct device *dev)
 			       ret);
 			return ret;
 		}
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+		}
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
+#ifdef CONFIG_PM_EMMC_CUST_SH
+		}
+#endif /* CONFIG_PM_EMMC_CUST_SH */
 	}
 
 	return ret;

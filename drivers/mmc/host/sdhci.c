@@ -1386,6 +1386,9 @@ static int sdhci_set_power(struct sdhci_host *host, unsigned short power)
  * MMC callbacks                                                             *
  *                                                                           *
 \*****************************************************************************/
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+extern bool sh_mmc_pending_resume;
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 
 static int sdhci_enable(struct mmc_host *mmc)
 {
@@ -1396,6 +1399,15 @@ static int sdhci_enable(struct mmc_host *mmc)
 					host->cpu_dma_latency_us);
 	if (host->ops->platform_bus_voting)
 		host->ops->platform_bus_voting(host, 1);
+
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+	if (strncmp(mmc_hostname(mmc), HOST_MMC_SD, sizeof(HOST_MMC_SD)) == 0){
+		if(sh_mmc_pending_resume == true){
+			sh_mmc_pending_resume = false;
+			mmc_resume_host(mmc);
+		}
+	}
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 
 	return 0;
 }
@@ -1413,9 +1425,14 @@ static int sdhci_disable(struct mmc_host *mmc)
 		 * released.
 		 */
 		if (host->power_policy == SDHCI_PERFORMANCE_MODE)
+#ifdef CONFIG_USE_QOS_WITH_TIMEOUT_MMC_CUST_SH
 			pm_qos_update_request_timeout(&host->pm_qos_req_dma,
 					host->cpu_dma_latency_us,
 					host->pm_qos_timeout_us);
+#else /* CONFIG_USE_QOS_WITH_TIMEOUT_MMC_CUST_SH */
+			pm_qos_update_request(&host->pm_qos_req_dma,
+					PM_QOS_DEFAULT_VALUE);
+#endif /* CONFIG_USE_QOS_WITH_TIMEOUT_MMC_CUST_SH */
 		else
 			pm_qos_update_request(&host->pm_qos_req_dma,
 					PM_QOS_DEFAULT_VALUE);
@@ -3172,6 +3189,14 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	caps[1] = (host->version >= SDHCI_SPEC_300) ?
 		sdhci_readl(host, SDHCI_CAPABILITIES_1) : 0;
+
+#ifdef CONFIG_MMC_SD_CUST_SH
+	if (!strcmp(mmc_hostname(mmc), HOST_MMC_SD)) {
+		caps[0] &= ~SDHCI_CAN_VDD_180;
+		caps[1] &= ~(SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |
+		                   SDHCI_SUPPORT_DDR50 | SDHCI_USE_SDR50_TUNING);
+	}
+#endif
 
 	if (host->quirks & SDHCI_QUIRK_FORCE_DMA)
 		host->flags |= SDHCI_USE_SDMA;
