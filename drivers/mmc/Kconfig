@@ -27,6 +27,41 @@ config MMC_PERF_PROFILING
 	  If you say Y here, support will be added for collecting
 	  performance numbers at the MMC Queue and Host layers.
 
+config MMC_CUST_SH
+	bool "SHARP MMC driver customized"
+	depends on MMC
+	default n
+
+config MMC_SD_CUST_SH
+	bool "SHARP SD driver customized"
+	depends on MMC_CUST_SH
+	default n
+
+config MMC_SD_PENDING_RESUME_CUST_SH
+	bool "SHARP SD pending resume customized"
+	depends on MMC_SD_CUST_SH
+	default n
+
+config MMC_SDIO_CUST_SH
+	bool "SHARP SDIO driver customized"
+	depends on MMC_CUST_SH
+	default n
+
+config ERR_RETRY_MMC_CUST_SH
+	bool "SHARP MMC error retry customized"
+	depends on MMC_CUST_SH
+	default n
+
+config CLOCKTIME_MMC_CUST_SH
+	bool "SHARP MMC clocktime customized"
+	depends on MMC_CUST_SH
+	default n
+
+config USE_QOS_WITH_TIMEOUT_MMC_CUST_SH
+	bool "SHARP MMC use qos with timeout customized"
+	depends on MMC_CUST_SH
+	default n
+
 if MMC
 
 source "drivers/mmc/core/Kconfig"
