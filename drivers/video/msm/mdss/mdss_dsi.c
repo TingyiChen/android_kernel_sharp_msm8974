@@ -872,7 +872,23 @@ int mdss_dsi_cont_splash_on(struct mdss_panel_data *pdata)
 
 	mdss_dsi_sw_reset(pdata);
 	mdss_dsi_host_init(pdata);
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00050 */
+	mdss_dsi_op_mode_config(DSI_CMD_MODE, pdata);
+
+	if (ctrl_pdata->on_cmds.link_state == DSI_HS_MODE)
+		mdss_dsi_set_tx_power_mode(0, pdata);
+	ret = mdss_dsi_unblank(pdata);
+	if (ctrl_pdata->on_cmds.link_state == DSI_HS_MODE)
+		mdss_dsi_set_tx_power_mode(1, pdata);
+	if (ret) {
+		pr_err("%s: unblank failed\n", __func__);
+		return ret;
+	}
+
 	mdss_dsi_op_mode_config(mipi->mode, pdata);
+#else  /* CONFIG_SHLCDC_BOARD */
+	mdss_dsi_op_mode_config(mipi->mode, pdata);
+#endif /* CONFIG_SHLCDC_BOARD */
 	pr_debug("%s-:End\n", __func__);
 	return ret;
 }
@@ -1042,8 +1058,18 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		break;
 	case MDSS_EVENT_PANEL_OFF:
 		ctrl_pdata->ctrl_state &= ~CTRL_STATE_MDP_ACTIVE;
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00050 */
+		if (ctrl_pdata->off_cmds.link_state == DSI_LP_MODE) {
+			if (pdata->panel_info.mipi.mode == DSI_VIDEO_MODE) {
+				mdss_dsi_sw_reset(pdata);
+				mdss_dsi_host_init(pdata);
+			}
+			rc = mdss_dsi_blank(pdata);
+		}
+#else  /* CONFIG_SHLCDC_BOARD */
 		if (ctrl_pdata->off_cmds.link_state == DSI_LP_MODE)
 			rc = mdss_dsi_blank(pdata);
+#endif /* CONFIG_SHLCDC_BOARD */
 		rc = mdss_dsi_off(pdata);
 		break;
 	case MDSS_EVENT_CONT_SPLASH_FINISH:
@@ -1066,10 +1092,24 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		}
 		break;
 	case MDSS_EVENT_CONT_SPLASH_BEGIN:
+#ifdef CONFIG_SHLCDC_BOARD /* CUST_ID_00050 */
+		if (ctrl_pdata->off_cmds.link_state == DSI_HS_MODE &&
+						(int)arg == DSI_HS_MODE) {
+			/* Panel is Enabled in Bootloader */
+			rc = mdss_dsi_blank(pdata);
+		} else if (ctrl_pdata->off_cmds.link_state == DSI_LP_MODE &&
+						(int)arg == DSI_LP_MODE) {
+			/* Panel is Enabled in Bootloader */
+			mdss_dsi_sw_reset(pdata);
+			mdss_dsi_host_init(pdata);
+			rc = mdss_dsi_blank(pdata);
+		}
+#else  /* CONFIG_SHLCDC_BOARD */
 		if (ctrl_pdata->off_cmds.link_state == DSI_HS_MODE) {
 			/* Panel is Enabled in Bootloader */
 			rc = mdss_dsi_blank(pdata);
 		}
+#endif /* CONFIG_SHLCDC_BOARD */
 		break;
 	case MDSS_EVENT_ENABLE_PARTIAL_UPDATE:
 		rc = mdss_dsi_ctl_partial_update(pdata);
